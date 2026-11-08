@@ -4,35 +4,54 @@ Author URL: http://webthemez.com
 */
 jQuery(function($) {
     'use strict';
-     
+
+    // Local preview helper: when the site is opened straight from disk (file://),
+    // folder links such as "legal/" or "../#contact-us" would show a directory
+    // listing. Point them at the folder's index.html. On a web server the clean
+    // URLs (/software/, /legal/, ...) are left untouched.
+    if (window.location.protocol === 'file:') {
+        $('a[href]').each(function() {
+            var m = $(this).attr('href').match(/^([^:?#]*\/)(#.*)?$/);
+            if (m && m[1].indexOf('//') !== 0) {
+                $(this).attr('href', m[1] + 'index.html' + (m[2] || ''));
+            }
+        });
+    }
+
     $(window).scroll(function(event) {
         Scroll();
     });
 
-    $('.navbar-collapse ul li a').on('click', function() {
+    // Smooth-scroll only for links to a section on the current page; links to
+    // other department pages navigate normally.
+    $('.navbar-collapse ul li a').on('click', function(e) {
+        var samePage = this.hostname === window.location.hostname &&
+            this.pathname.replace(/^\//, '') === window.location.pathname.replace(/^\//, '');
+        var $target = samePage && this.hash ? $(this.hash) : $();
+        if (!$target.length) {
+            return;
+        }
+        e.preventDefault();
         $('html, body').animate({
-            scrollTop: $(this.hash).offset().top - 5
+            scrollTop: $target.offset().top - 5
         }, 1000);
-        return false;
+        $('.navbar-collapse.in').collapse('hide');
     });
- 
+
+    // Highlight the nav item of the section currently in view (home page only:
+    // items marked li.scroll that point at an in-page #anchor).
     function Scroll() {
-        var contentTop = [];
-        var contentBottom = [];
         var winTop = $(window).scrollTop();
         var rangeTop = 200;
-        var rangeBottom = 500;
-        $('.navbar-collapse').find('.scroll a').each(function() {
-            contentTop.push($($(this).attr('href')).offset().top);
-            contentBottom.push($($(this).attr('href')).offset().top + $($(this).attr('href')).height());
-        })
-        $.each(contentTop, function(i) {
-            if (winTop > contentTop[i] - rangeTop) {
-                $('.navbar-collapse li.scroll')
-                    .removeClass('active')
-                    .eq(i).addClass('active');
+        var $items = $('.navbar-collapse li.scroll');
+        $items.each(function() {
+            var href = $(this).children('a').attr('href') || '';
+            var $section = href.charAt(0) === '#' ? $(href) : $();
+            if ($section.length && winTop > $section.offset().top - rangeTop) {
+                $items.removeClass('active');
+                $(this).addClass('active');
             }
-        })
+        });
     };
 
     $('#tohash').on('click', function() {
@@ -52,6 +71,9 @@ jQuery(function($) {
         'use strict';
         var $portfolio_selectors = $('.portfolio-filter >li>a');
         var $portfolio = $('.portfolio-items');
+        if (!$portfolio.length || !$.fn.isotope) {
+            return;
+        }
         $portfolio.isotope({
             itemSelector: '.portfolio-item',
             layoutMode: 'fitRows'
@@ -110,9 +132,11 @@ jQuery(function($) {
     });
 
  
-    $("a[rel^='prettyPhoto']").prettyPhoto({
-        social_tools: false
-    });
+    if ($.fn.prettyPhoto) {
+        $("a[rel^='prettyPhoto']").prettyPhoto({
+            social_tools: false
+        });
+    }
  
 
 });
